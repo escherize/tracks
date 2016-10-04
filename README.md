@@ -1,6 +1,10 @@
 # tracks
 
+![Converging Tracks](https://raw.githubusercontent.com/escherize/tracks/master/tracks.jpg)
+
 This library is intended to simplify transformations of Clojure datastructures. Instead of saying what we want done to them in a sequential order, track lets you create functions by __example__.
+
+So you setup a track from what you have to what you want and track does the rest.
 
 ## Usage
 
