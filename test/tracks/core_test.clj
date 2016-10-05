@@ -8,7 +8,7 @@
 
 (def scalar (g/one-of [g/int g/string-alphanumeric g/keyword]))
 
-(def ^:dynamic *run-times* 20)
+(def ^:dynamic *trial-count* 30)
 
 (def shallow-data-gen
   (g/one-of
@@ -25,7 +25,7 @@
                    shallow-data-gen))
 
 (defspec simple-paths
-  *run-times*
+  *trial-count*
   (prop/for-all [m shallow-map-gen]
                 (let [[in out] ((juxt identity paths) m)]
                   (= (first (keys out)) (get-in in (first (vals out)))))))
@@ -33,9 +33,8 @@
 (deftest deeper-map-path
   (let [in-map {:a ["one" "two"]}
         p (paths in-map)]
-    (is (= p
-           {"one" [:a 0]
-            "two" [:a 1]}))))
+    (is (= p {"one" [:a 0]
+              "two" [:a 1]}))))
 
 (deftest track-works
   (testing "can move keys"
@@ -56,3 +55,9 @@
       (is (= {:b [:one :zero]}
              (a-to-b-and-reverse
               {:a [:zero :one]}))))))
+
+(defspec shallow-maps-shuffled-keys
+  *trial-count*
+  (prop/for-all [m shallow-map-gen]
+                (let [map-two (zipmap (keys m) (shuffle (vals m)))]
+                  (= map-two ((track m map-two) m)))))
