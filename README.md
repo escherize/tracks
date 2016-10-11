@@ -4,11 +4,9 @@
 
 This library is intended to simplify transformations of Clojure datastructures. Instead of saying what we want done to them in a sequential order, track lets you create functions by __example__.  This makes writing glue code that takes giant maps of one shape and transforms them *dead simple*.
 
-It works by finding paths to identitical values in the inputs and automatically producing a function that will make those changes.
+So, setup a track from what you have to what you want and track does the rest.
 
-So, setup a track from what you have to what you want and track does the rest!
-
-## Usage
+## Examples
 
 We can do simple transformations on maps track:
 
@@ -33,7 +31,52 @@ or more complicated ones:
 ;; => {:b [:one :zero]}
 ```
 
-If the values don't exist, they are ignored (`:z` and `"??"` here).
+Here we do something understandably and quickly:
+
+```clojure
+(def deep-ways
+  (track {0 "can" 1 "use" 2 "any" 3 "scalar value."}
+         {:a "can" :b {:c "use" :d {:e "any" :f {:g "scalar value."}}}}))
+
+(deep-ways {0 "first" 1 "sec" 2 "therd" 3 "feor"})
+;; => {:a "first" :b {:c "sec" :d {:e "therd" :f {:g "feor"}}}}
+```
+
+This greatly simplifies some arbitrary logic when it comes to swapping around things in the code:
+
+```clojure
+
+(def move-players
+  (tracks {:active-player 1 :players [2 3 4]}
+          {:active-player 2 :players [3 4 1]}))
+
+(defonce game (atom {:active-player {:name "A"} ;;<- note the more complex leaf!
+                     :players [{:name "B"}
+                               {:name "C"}
+                               {:name "D"}]}))
+
+(swap! game move-players)
+;;=>  {:active-player {:name "B"}
+;;     :players [{:name "C"}
+;;               {:name "D"}
+;;               {:name "A"}]}
+
+(swap! game move-players)
+;;=>  {:active-player {:name "C"}
+;;     :players [{:name "D"}
+;;               {:name "A"}
+;;               {:name "B"}]}
+
+
+(swap! game move-players)
+;;=>  {:active-player {:name "D"}
+;;     :players [{:name "A"}
+;;               {:name "B"}
+;;               {:name "C"}]}
+
+```
+
+If common values don't exist between in and out, they are ignored (`:z` and `"??"` here).
 
 ``` clojure
 (def zed (track {:a [0 1] :z "??"} {:b [1 0]}))
@@ -45,27 +88,24 @@ If the values don't exist, they are ignored (`:z` and `"??"` here).
 ;;=> {:b ["TWO" "ONE"]}
 
 ```
-
 ### Using functions with track
-#### With maps:
-Sometimes we want a bit more than a pure transformation.  That's why track lets you supply a map explaining what functions to apply to what leaf nodes.
+
+Sometimes we want more than a pure transformation. That's why track lets you supply a map explaining what functions to apply to what leaf nodes.
 
 ``` clojure
 (def swap-and-inc
   (track
     {:here 1}
     {:now {:its {:here [1 "<- and its one larger."]}}}
-    {1 inc} ;;<- means call in on 1 as it's moved.
+    {1 inc} ;;<- means call inc on the value at position 1
     ))
 (swap-and-inc {:here 100})
 ;;=> {:now {:its {:here [101 "<- and its one larger."]}}}
 
 ```
 
-
 ## License
 
 Copyright © 2016 Bryan Maass
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.
