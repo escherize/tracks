@@ -6,9 +6,9 @@
             [clojure.test.check.properties :as prop]
             [clojure.test.check.clojure-test :refer [defspec]]))
 
-(def scalar (g/one-of [g/int g/string-alphanumeric g/keyword]))
+(def scalar (g/one-of [g/char g/int g/string-alphanumeric g/keyword]))
 
-(def ^:dynamic *trial-count* 30)
+(def ^:dynamic *trial-count* 50)
 
 (def shallow-data-gen
   (g/one-of
@@ -17,22 +17,32 @@
 (def shallow-map-gen
   (g/such-that not-empty (g/map scalar scalar)))
 
-(def map-gen
-  (g/map g/keyword shallow-data-gen))
-
-(def recursive-data-gen
-  (g/recursive-gen (fn [inner] (g/one-of [(g/vector inner) (g/list inner) (g/map inner inner)]))
-                   shallow-data-gen))
-
 (defspec simple-paths
   *trial-count*
   (prop/for-all [m shallow-map-gen]
-                (let [[in out] ((juxt identity paths) m)]
-                  (= (first (keys out)) (get-in in (first (vals out)))))))
+    (let [[in out] ((juxt identity (comp paths ->m)) m)]
+      (= (first (keys out)) (get-in in (first (vals out)))))))
+
+(defspec complex-maps
+  *trial-count*
+  (prop/for-all [in-map shallow-map-gen]
+    (let [in in-map
+          leafs (keys (paths (->m in)))
+          out-paths (repeatedly (count leafs) #(g/sample scalar))
+          out (->> (map #(assoc-in {} %1 %2) out-paths leafs)
+                   (apply merge))
+          in->out (tracks in out)]
+      (= out (in->out in)))))
+
+(defspec shallow-maps-shuffled-keys
+  *trial-count*
+  (prop/for-all [m shallow-map-gen]
+    (let [map-two (zipmap (keys m) (shuffle (vals m)))]
+      (= map-two ((track m map-two) m)))))
 
 (deftest deeper-map-path
   (let [in-map {:a ["one" "two"]}
-        p (paths in-map)]
+        p (paths (->m in-map))]
     (is (= p {"one" [:a 0]
               "two" [:a 1]}))))
 
@@ -56,8 +66,30 @@
              (a-to-b-and-reverse
               {:a [:zero :one]}))))))
 
-(defspec shallow-maps-shuffled-keys
-  *trial-count*
-  (prop/for-all [m shallow-map-gen]
-                (let [map-two (zipmap (keys m) (shuffle (vals m)))]
-                  (= map-two ((track m map-two) m)))))
+(deftest track-with-lists
+  (testing "swap lists"
+    (is (= '(:a :b)
+           ((track '(0 1) '(1 0))
+            '(:b :a))))
+    (is (= '(:a :c :b)
+           ((track '(0 1 2) '(0 2 1))
+            '(:a :b :c))))))
+
+(deftest rotation
+  (let [rotate-players (tracks {:active-player 1 :players [2 3 4]}
+                               {:active-player 2 :players [3 4 1]})
+        initial-game {:active-player {:name "A"} ;;<- note the more complex leaf!
+                      :players [{:name "B"}
+                                {:name "C"}
+                                {:name "D"}]}
+        game (atom initial-game)]
+    (is (= initial-game @game))
+    (swap! game rotate-players)
+    (is (= {:active-player {:name "B"}
+            :players [{:name "C"}
+                      {:name "D"}
+                      {:name "A"}]} @game))
+    (swap! game rotate-players)
+    (swap! game rotate-players)
+    (swap! game rotate-players)
+    (is (= initial-game @game))))

@@ -2,6 +2,43 @@
   (:require [clojure.walk :as w]
             [clojure.set :as set]))
 
+(defn- shallow->m [coll]
+  (with-meta
+    (if (or (list? coll) (vector? coll))
+      (->> coll
+           (map-indexed (fn [idx x] [idx x]))
+           (into {}))
+      coll )
+    {::type (type coll)}))
+
+(defn- m-able? [x]
+  (and (not= clojure.lang.MapEntry (type x))
+       (or (list? x) (vector? x))))
+
+(defn ->m [coll]
+  (w/prewalk (fn [x] (if (m-able? x) (shallow->m x) x)) coll))
+
+(defn m->list [m-map]
+  (map m-map (range 0 (count m-map))))
+
+(defn m->vec [m-map]
+  (mapv m-map (range 0 (count m-map))))
+
+(defn shallow<-m [m-map]
+  (if-let [type (::type (meta m-map))]
+    (let [operator ({clojure.lang.PersistentVector m->vec
+                     clojure.lang.PersistentList m->list}
+                    type)]
+      (operator m-map))
+    (throw (ex-info
+            (str "m-map called on something without :tracks.core/type metadata: "
+                 m-map " metadata: " (meta m-map)) {}))))
+
+(defn <-m [m-map]
+  (w/postwalk
+   (fn [x] (if (::type (meta x)) (shallow<-m x) x))
+   m-map))
+
 (defn- keys-into [m]
   (if (map? m)
     (vec
@@ -13,45 +50,38 @@
              m))
     []))
 
-(defn- ->m-shallow [coll]
-  (if (or (list? coll) (vector? coll))
-    (->> coll
-         (map-indexed (fn [idx x] [idx x]))
-         (into {}))
-    coll))
-
-(defn- m-able? [x]
-  (and (not= (type x) clojure.lang.MapEntry)
-       (coll? x)
-       (or (list? x) (vector? x))))
-
-(defn ->m [coll]
-  (w/prewalk
-   (fn [x] (if (m-able? x) (->m-shallow x) x))
-   coll))
-
 (defn paths [m]
-  (let [m-map (->m m)
-        keys-into-m (keys-into m-map)]
-    (->> keys-into-m
-         (mapv (fn [path] [(get-in m path) path]))
-         (into {}))))
+  (->> (keys-into m)
+       (mapv (fn [path]
+               (let [leaf-value (get-in m path)]
+                 [leaf-value path])))
+       (into {})))
 
 (defn track
-  "Given two maps in and out, returns f s.t. f(in) = out for all shared keys."
-  [in out]
-  (let [in-paths (paths in)
-        out-paths (paths out)]
-    (fn [input]
-      (loop [out-map out
-             common-vals (vec
-                          (set/intersection
-                           (set (keys in-paths))
-                           (set (keys out-paths))))]
-        (let [in-path (get in-paths (first common-vals))
-              out-path (get out-paths (first common-vals))]
-          (if (nil? common-vals)
-            out-map
-            (recur
-             (assoc-in out-map out-path (get-in input in-path))
-             (next common-vals))))))))
+  "Given two maps in and out, returns f s.t. f(in) = out for all shared keys.
+  -----
+  Given two maps in out, and value->fxn,
+  returns f s.t. f(in) = out with functions applied to the "
+  ([in out] (track in out {}))
+  ([in out value->fxn]
+   (let [in-paths (paths (->m in))
+         out-paths (paths (->m out))]
+     (fn [input]
+       (let [m-input (->m input)]
+         (loop [out-map (->m out)
+                common-vals (vec
+                             (set/intersection
+                              (set (keys in-paths))
+                              (set (keys out-paths))))]
+           (let [current-val (first common-vals)
+                 current-fn (get value->fxn current-val identity)
+                 in-path (get in-paths current-val)
+                 out-path (get out-paths current-val)]
+             (if (nil? common-vals)
+               (<-m out-map)
+               (recur
+                (assoc-in out-map out-path
+                          (-> m-input (get-in in-path) current-fn))
+                (next common-vals))))))))))
+
+(def tracks track)
