@@ -14,12 +14,12 @@ We can do simple transformations on maps with track:
 
 ;;=> {:a 3000 :b 100}
 
-(def must-go-deeper
+(def deeptransform
   (track {0 0 1 1 2 2 3 3}
-  {:a 0 :b {:c 1 :d {:e 2 :f {:g 3}}}}))
+         {:a 0 :b {:c 1 :d {:e 2 :f {:g 3}}}}))
 
-(deep-ways {0 "first" 1 "sec" 2 "therd" 3 "feor"})
-;; => {:item {:a "BBB", :b "HHH", :c "SSS"}}
+(deeptransform {0 "first" 1 "sec" 2 "therd" 3 "feor"})
+;;=> {:a "first", :b {:c "sec", :d {:e "therd", :f {:g "feor"}}}}
 ```
 
 or more complicated ones:
