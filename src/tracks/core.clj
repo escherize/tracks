@@ -57,6 +57,20 @@
                  [leaf-value path])))
        (into {})))
 
+(defn dissoc-in
+  "Dissociates an entry from a nested associative structure returning a new
+  nested structure. keys is a sequence of keys. Any empty maps that result
+  will not be present in the new structure."
+  [m [k & ks :as keys]]
+  (if ks
+    (if-let [nextmap (get m k)]
+      (let [newmap (dissoc-in nextmap ks)]
+        (if (seq newmap)
+          (assoc m k newmap)
+          (dissoc m k)))
+      m)
+    (dissoc m k)))
+
 (defn track
   "Given two maps in and out, returns f s.t. f(in) = out for all shared keys.
   -----
@@ -67,7 +81,8 @@
    (let [in-paths (paths (->m in))
          out-paths (paths (->m out))]
      (fn [input]
-       (let [m-input (->m input)]
+       (let [m-input (->m input)
+             final-merge (reduce dissoc-in m-input (vals in-paths))]
          (loop [out-map (->m out)
                 common-vals (vec
                              (set/intersection
@@ -78,7 +93,7 @@
                  in-path (get in-paths current-val)
                  out-path (get out-paths current-val)]
              (if (nil? common-vals)
-               (<-m out-map)
+               (<-m (merge out-map final-merge))
                (recur
                 (assoc-in out-map out-path
                           (-> m-input (get-in in-path) current-fn))

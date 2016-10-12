@@ -2,13 +2,11 @@
 
 ![Converging Tracks](https://raw.githubusercontent.com/escherize/tracks/master/tracks.jpg)
 
-This library is intended to simplify transformations of Clojure datastructures. Instead of saying what we want done to them in a sequential order, track lets you create functions by __example__.  This makes writing glue code that takes giant maps of one shape and transforms them *dead simple*.
-
-So, setup a track from what you have to what you want and track does the rest.
+This library simplifies transformations of Clojure datastructures. Instead of saying how to do a transformation, track works by allowing you to create those transformations by __example__.  This makes writing glue code that takes giant maps of one shape and transforms them into another *dead simple*.
 
 ## Examples
 
-We can do simple transformations on maps track:
+We can do simple transformations on maps with track:
 
 ``` clojure
 (def swap-a-b (track {:a 1 :b 2} {:a 2 :b 1}))
@@ -31,7 +29,7 @@ or more complicated ones:
 ;; => {:b [:one :zero]}
 ```
 
-Here we do something understandably and quickly:
+Here we do something weird, understandably and quickly:
 
 ```clojure
 (def deep-ways
@@ -40,9 +38,18 @@ Here we do something understandably and quickly:
 
 (deep-ways {0 "first" 1 "sec" 2 "therd" 3 "feor"})
 ;; => {:a "first" :b {:c "sec" :d {:e "therd" :f {:g "feor"}}}}
+
+
+;; Without track this is not a clear concise operation:
+(let [input {0 "first" 1 "sec" 2 "therd" 3 "feor"}]
+     {:a (get input 0)
+      :b {:c (get input 1)
+          :d {:e (get input 2)}
+              :f {:g (get input 3)}}})
+
 ```
 
-This greatly simplifies some arbitrary logic when it comes to swapping around things in the code:
+`track` greatly simplifies rotating values:
 
 ```clojure
 
@@ -88,6 +95,27 @@ If common values don't exist between in and out, they are ignored (`:z` and `"??
 ;;=> {:b ["TWO" "ONE"]}
 
 ```
+
+### Partial updating values with track
+
+Often we only want to update part of a datastructure. tracks make it possible:
+
+``` clojure
+
+(def transfer-a-to-b (track {:a 1} {:b 1}))
+
+(transfer-a-to-b {:a 1 :c 2})
+;;=> {:b 1 :c 2}
+
+
+(transfer-a-to-b {:a 1 :c 2 :d 3})
+;;=> {:b 1 :c 2 :d 3}
+
+```
+
+Note well: key paths not operated on by the function returned by tracks aren't touched.
+
+
 ### Using functions with track
 
 Sometimes we want more than a pure transformation. That's why track lets you supply a map explaining what functions to apply to what leaf nodes.

@@ -8,14 +8,19 @@
 
 (def scalar (g/one-of [g/char g/int g/string-alphanumeric g/keyword]))
 
-(def ^:dynamic *trial-count* 50)
+(def ^:dynamic *trial-count* 100)
 
 (def shallow-data-gen
   (g/one-of
    [(g/vector scalar) (g/list scalar) (g/map scalar scalar)]))
 
 (def shallow-map-gen
-  (g/such-that not-empty (g/map scalar scalar)))
+  (g/such-that #(and (not-empty %)
+                     (= (count (vals %))
+                        (count (set (vals %)))))
+               (g/map scalar scalar)
+               ;; 100 tries not 10.
+               100))
 
 (defspec simple-paths
   *trial-count*
@@ -23,11 +28,16 @@
     (let [[in out] ((juxt identity (comp paths ->m)) m)]
       (= (first (keys out)) (get-in in (first (vals out)))))))
 
+(deftest tracks-is-non-destructive
+  (is (= {:b 1 :c 2}
+         ((track {:a 1} {:b 1}) {:a 1 :c 2})))
+  (is (= {:b 1 :c 2 :d 3}
+         ((track {:a 1} {:b 1}) {:a 1 :c 2 :d 3}))))
+
 (defspec complex-maps
   *trial-count*
-  (prop/for-all [in-map shallow-map-gen]
-    (let [in in-map
-          leafs (keys (paths (->m in)))
+  (prop/for-all [in shallow-map-gen]
+    (let [leafs (keys (paths (->m in)))
           out-paths (repeatedly (count leafs) #(g/sample scalar))
           out (->> (map #(assoc-in {} %1 %2) out-paths leafs)
                    (apply merge))
