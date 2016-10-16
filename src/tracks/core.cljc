@@ -98,3 +98,5 @@
                 (assoc-in out-map out-path
                           (-> m-input (get-in in-path) current-fn))
                 (next common-vals))))))))))
+
+(def tracks track)

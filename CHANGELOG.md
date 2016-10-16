@@ -1,24 +1,26 @@
 # Change Log
-All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
+All notable changes to this project will be documented in this file. This change log loosely follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
-## [Unreleased]
-### Changed
-- Add a new arity to `make-widget-async` to provide a different widget shape.
 
-## [0.1.1] - 2016-10-04
-### Changed
-- Documentation on how to make the widgets.
-
-### Removed
-- `make-widget-sync` - we're all async, all the time.
-
-### Fixed
-- Fixed widget maker to keep working when daylight savings switches over.
-
-## 0.1.0 - 2016-10-04
+## [0.1.4] - 2016-10-16
 ### Added
-- Files from the new template.
-- Widget maker public API - `make-widget-sync`.
+- Tracks now runs on ClojureScript!
+### Removed
+- `tracks.core/tracks` is no longer an alias for `tracks.core/track`
 
-[Unreleased]: https://github.com/your-name/tracks/compare/0.1.1...HEAD
-[0.1.1]: https://github.com/your-name/tracks/compare/0.1.0...0.1.1
+## [0.1.3] - 2016-10-08
+### Fixed
+- Make tracks non-destructive, i.e. do not edit keys that are not operated on.
+### Changed
+- Improve docs
+
+## [0.1.2] - 2016-10-04
+### Added
+- Added optional function-map to tracks.
+### Changed
+- Improve docs
+
+
+## [0.1.0] - 2016-10-04
+### Changed
+- First relase of tracks
