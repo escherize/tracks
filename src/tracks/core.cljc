@@ -21,8 +21,8 @@
          (even? (count bindings))]}
   (let* [val-syms (repeatedly (/ (count bindings) 2) gensym)
          paths (->> bindings
-                    (partition 2)
-                    (map (fn [sym [struct _]]
+                    (take-nth 2)
+                    (map (fn [sym struct]
                            (->> struct
                                 symbol-paths
                                 (map (fn [[k v]]
