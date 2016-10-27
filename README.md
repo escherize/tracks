@@ -4,6 +4,8 @@
 
 This library simplifies transformations of Clojure datastructures. Instead of saying how to do a transformation, track works by allowing you to create those transformations by __example__.  This makes writing glue code that takes giant maps of one shape and transforms them into another *dead simple*.
 
+[![Build Status](https://travis-ci.org/escherize/tracks.svg?branch=master)](https://travis-ci.org/escherize/tracks)
+
 ## Include
 
 To use this, add to dependencies:
