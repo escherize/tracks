@@ -71,6 +71,37 @@
       m)
     (dissoc m k)))
 
+(defmacro let-track 
+  "All track bindings that are symbols will be destructed into a let binding."
+  [bindings & body]
+  (assert (and (vector? bindings) 
+               (seq bindings)) 
+          "Must supply a vector of bindings")
+  (assert (even? (count bindings)) 
+          "Each binding must be a pair")
+  (let [bindings# 
+        (->> bindings 
+             (partition 2)
+             (mapcat 
+              (fn [[track# input#]]
+                (let [sym# (gensym)
+
+                      track-bindings# 
+                      (->> track# 
+                           ->m 
+                            paths
+                            (filter #(symbol? (first %))))]
+                  (assert (seq track-bindings#) 
+                          (str "No bindings found in track: " track#))
+                  (concat 
+                    [sym# input#]
+                    (mapcat 
+                      (fn [[b# v#]]
+                        [b# `(get-in ~sym# ~v#)])
+                      track-bindings#)))))
+             (vec))] 
+        `(let ~bindings# ~@body)))
+
 (defn track
   "Given two maps in and out, returns f s.t. f(in) = out for all shared keys.
   -----
