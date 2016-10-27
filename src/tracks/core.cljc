@@ -19,19 +19,14 @@
 (defmacro let [bindings body]
   {:pre [(vector? bindings)
          (even? (count bindings))]}
-  (let* [val-syms (repeatedly (/ (count bindings) 2) gensym)
-         paths (->> bindings
-                    (take-nth 2)
-                    (map (fn [sym struct]
-                           (->> struct
-                                symbol-paths
-                                (map (fn [[k v]]
-                                       [k [sym v]]))
-                                (into {})))
-                         val-syms)
-                    (apply merge))]
-    `(let* [~@(mapcat vector val-syms (take-nth 2 (next bindings)))
-            ~@(mapcat (fn [[k [sym v]]]
-                        [k `(path->value ~v ~sym)])
-                      paths)]
+  (let* [bindings'
+         (->> bindings
+              (partition 2)
+              (mapcat (fn [[shape v]]
+                        (->> shape
+                             symbol-paths
+                             (mapcat (fn [[k p]]
+                                       [k (path->value p v)])))))
+              vec)]
+    `(let* ~bindings'
        ~body)))
