@@ -103,3 +103,10 @@
     (swap! game rotate-players)
     (swap! game rotate-players)
     (is (= initial-game @game))))
+
+(deftest let-track
+  (is (= "Hello World!"
+         (let [bang "!"]
+           (tracks/let-track [{:a hi :b hello} {:a "Hello" :b "World"}
+                              {:punk punk} (assoc {} :punk bang)]
+                             (str hi " " hello punk))))))
