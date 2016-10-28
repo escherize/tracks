@@ -178,6 +178,20 @@ Often we only want to update a subset of a datastructure:
 
 Note well: key paths not operated on by the function returned by `track` (`[:c]` and `[:d]`) aren't edited.
 
+## Let-track macro for simple destructuring
+
+Destructuring complex nested data structures can be a real pain. Tracks makes this easy.
+
+Much like a regular `let`, symbols in the track pattern will be bound to the value and available the body.
+
+```clojure
+
+(let-track [{:a special-symbol} {:a "Hello World!"}]
+  special-symbol)
+;;=> "Hello World!"
+
+```
+
 ## Other things
 
 If leaf values don't exist in both the first and second arguments, then they are untouched in the input (like `"??"` below).
