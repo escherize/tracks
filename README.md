@@ -19,6 +19,9 @@ Require tracks in your namespace header:
 
     (:require [tracks.core :as t :refer [track]])
 
+
+[![Build Status](https://travis-ci.org/escherize/tracks.svg?branch=master)](https://travis-ci.org/escherize/tracks)
+
 ## Rationale
 
 Often we find ourselves with large maps that are uncomfortable to reason about.
