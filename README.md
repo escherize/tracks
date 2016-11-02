@@ -192,7 +192,7 @@ Much like a regular `let`, symbols in the track pattern will be bound to the val
 
 ```clojure
 
-(let-track [{:a {:b special-symbol}} {:a {:b "Hello World!"}}]
+(t/let [{:a {:b special-symbol}} {:a {:b "Hello World!"}}]
   special-symbol)
 
 ;;=> "Hello World!"
@@ -203,7 +203,7 @@ track/let also allows you to combine values in a way that `track` does not.
 
 ```clojure
 
-(let-track [{:a {:b one} :c {:d two}} {:a {:b 1} :c {:d 2}}]
+(t/let [{:a {:b one} :c {:d two}} {:a {:b 1} :c {:d 2}}]
   (+ one two))
 
 ;;=> 3
