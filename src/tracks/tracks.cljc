@@ -1,6 +1,6 @@
-(ns tracks.core
-  (:require [clojure.walk :as w]
-            [clojure.set :as set]))
+(ns tracks.tracks
+  (:require [clojure.set :as set]
+            [clojure.walk :as w]))
 
 (defn- shallow->m [coll]
   (with-meta

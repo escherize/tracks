@@ -1,102 +1,51 @@
 (ns tracks.core
-  (:require [clojure.walk :as w]
-            [clojure.set :as set]))
+  (:refer-clojure :exclude [let])
+  (:require [tracks.tracks :as tracks]))
 
-(defn- shallow->m [coll]
-  (with-meta
-    (if (or (list? coll) (vector? coll))
-      (->> coll
-           (map-indexed (fn [idx x] [idx x]))
-           (into {}))
-      coll )
-    {::type (type coll)}))
+(def track tracks/track)
 
-(defn- m-able? [x]
-  (and (not= clojure.lang.MapEntry (type x))
-       (or (list? x) (vector? x))))
+(defn- symbol-paths [x]
+  (letfn [(f [x p]
+            (cond
+              (symbol? x) {x p}
+              (map? x) (apply merge (map #(f (val %) (conj p (key %))) x))
+              (sequential? x) (apply merge (map-indexed #(f %2 (conj p %1)) x))))]
+    (f x [])))
 
-(defn ->m [coll]
-  (w/prewalk (fn [x] (if (m-able? x) (shallow->m x) x)) coll))
+(defn path->value [p x]
+  (if (empty? p)
+    x
+    (recur (next p)
+           (if (sequential? x)
+             (nth x (first p))
+             (get x (first p))))))
 
-(defn m->list [m-map]
-  (map m-map (range 0 (count m-map))))
+(defmacro assert-args
+  [& pairs]
+  `(do (when-not ~(first pairs)
+         (throw (IllegalArgumentException.
+                 (str (first ~'&form) " requires " ~(second pairs) " in " ~'*ns* ":" (:line (meta ~'&form))))))
+       ~(clojure.core/let [more (nnext pairs)]
+          (when more
+            (list* `assert-args more)))))
 
-(defn m->vec [m-map]
-  (mapv m-map (range 0 (count m-map))))
-
-(defn shallow<-m [m-map]
-  (if-let [type (::type (meta m-map))]
-    (let [operator ({clojure.lang.PersistentVector m->vec
-                     clojure.lang.PersistentList m->list}
-                    type)]
-      (operator m-map))
-    (throw (ex-info
-            (str "m-map called on something without :tracks.core/type metadata: "
-                 m-map " metadata: " (meta m-map)) {}))))
-
-(defn <-m [m-map]
-  (w/postwalk
-   (fn [x] (if (::type (meta x)) (shallow<-m x) x))
-   m-map))
-
-(defn- keys-into [m]
-  (if (map? m)
-    (vec
-     (mapcat (fn [[k v]]
-               (let [nested (->> (keys-into v)
-                                 (filter (comp not empty?))
-                                 (map #(into [k] %)))]
-                 (if (seq nested) nested [[k]])))
-             m))
-    []))
-
-(defn paths [m]
-  (->> (keys-into m)
-       (mapv (fn [path]
-               (let [leaf-value (get-in m path)]
-                 [leaf-value path])))
-       (into {})))
-
-(defn dissoc-in
-  "Dissociates an entry from a nested associative structure returning a new
-  nested structure. keys is a sequence of keys. Any empty maps that result
-  will not be present in the new structure."
-  [m [k & ks :as keys]]
-  (if ks
-    (if-let [nextmap (get m k)]
-      (let [newmap (dissoc-in nextmap ks)]
-        (if (seq newmap)
-          (assoc m k newmap)
-          (dissoc m k)))
-      m)
-    (dissoc m k)))
-
-(defn track
-  "Given two maps in and out, returns f s.t. f(in) = out for all shared keys.
-  -----
-  Given two maps in out, and value->fxn,
-  returns f s.t. f(in) = out with functions applied to the "
-  ([in out] (track in out {}))
-  ([in out value->fxn]
-   (let [in-paths (paths (->m in))
-         out-paths (paths (->m out))]
-     (fn [input]
-       (let [m-input (->m input)
-             final-merge (reduce dissoc-in m-input (vals in-paths))]
-         (loop [out-map (->m out)
-                common-vals (vec
-                             (set/intersection
-                              (set (keys in-paths))
-                              (set (keys out-paths))))]
-           (let [current-val (first common-vals)
-                 current-fn (get value->fxn current-val identity)
-                 in-path (get in-paths current-val)
-                 out-path (get out-paths current-val)]
-             (if (nil? common-vals)
-               (<-m (merge out-map final-merge))
-               (recur
-                (assoc-in out-map out-path
-                          (-> m-input (get-in in-path) current-fn))
-                (next common-vals))))))))))
-
-(def tracks track)
+(defmacro let [bindings & body]
+  (assert-args
+   (vector? bindings) "a vector for its binding"
+   (even? (count bindings)) "an even number of forms in binding vector")
+  (let* [val-syms (repeatedly (/ (count bindings) 2) gensym)
+         paths (->> bindings
+                    (take-nth 2)
+                    (map (fn [sym struct]
+                           (->> struct
+                                symbol-paths
+                                (map (fn [[k v]]
+                                       [k [sym v]]))
+                                (into {})))
+                         val-syms)
+                    (apply merge))]
+    `(let* [~@(mapcat vector val-syms (take-nth 2 (next bindings)))
+            ~@(mapcat (fn [[k [sym v]]]
+                        [k `(path->value ~v ~sym)])
+                      paths)]
+       ~@body)))
