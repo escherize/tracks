@@ -8,17 +8,24 @@
 
 > -- Mahatma Gandhi
 
-This library simplifies transformations of Clojure datastructures. Instead of saying how to do a transformation, track works by allowing you to create those transformations by __example__.  This makes writing glue code that takes giant maps of one shape and transforms them into another *dead simple*.
+## Usage
 
-## Include
+Add the following line to your leiningen dependencies:
 
-To use this, add to dependencies:
 [![Clojars Project](https://img.shields.io/clojars/v/tracks.svg)](https://clojars.org/tracks)
 
+Require tracks in your namespace header:
 
-There's only 1 function to use: `track`, so I reccomend :requiring thusly:
 
-`(:require [tracks.core :refer [track]])`
+    (:require [tracks.core :as t :refer [track]])
+
+
+## Rationale
+
+Often we find ourselves with large maps that are uncomfortable to reason about.
+
+This library simplifies transformations and destructuring of Clojure datastructures. Instead of describing how to do a transformation, tracks allows you to create those transformations by __example__.  This makes writing glue code that takes giant maps of one shape and transforms them into another *dead simple*.
+
 
 ## Examples
 
@@ -178,7 +185,11 @@ Often we only want to update a subset of a datastructure:
 
 Note well: key paths not operated on by the function returned by `track` (`[:c]` and `[:d]`) aren't edited.
 
+<<<<<<< HEAD
 ## Let-track macro for simple destructuring
+=======
+## track/let macro for simple destructuring
+>>>>>>> escherize/master
 
 Destructuring complex nested data structures can be a real pain. Tracks makes this easy.
 
@@ -186,12 +197,32 @@ Much like a regular `let`, symbols in the track pattern will be bound to the val
 
 ```clojure
 
+<<<<<<< HEAD
 (let-track [{:a special-symbol} {:a "Hello World!"}]
   special-symbol)
+=======
+(t/let [{:a {:b special-symbol}} {:a {:b "Hello World!"}}]
+  special-symbol)
+
+>>>>>>> escherize/master
 ;;=> "Hello World!"
 
 ```
 
+<<<<<<< HEAD
+=======
+track/let also allows you to combine values in a way that `track` does not.
+
+```clojure
+
+(t/let [{:a {:b one} :c {:d two}} {:a {:b 1} :c {:d 2}}]
+  (+ one two))
+
+;;=> 3
+
+```
+
+>>>>>>> escherize/master
 ## Other things
 
 If leaf values don't exist in both the first and second arguments, then they are untouched in the input (like `"??"` below).
