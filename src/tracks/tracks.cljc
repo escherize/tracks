@@ -12,8 +12,10 @@
     {::type (type coll)}))
 
 (defn- m-able? [x]
-  (and (not= clojure.lang.MapEntry (type x))
-       (or (list? x) (vector? x))))
+  (when x
+    (and
+     (not= clojure.lang.MapEntry (type x))
+     (or (list? x) (vector? x)))))
 
 (defn ->m [coll]
   (w/prewalk (fn [x] (if (m-able? x) (shallow->m x) x)) coll))
