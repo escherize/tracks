@@ -9,7 +9,7 @@
 
 (def scalar (g/one-of [g/char g/int g/string-alphanumeric g/keyword]))
 
-(def ^:dynamic *trial-count* 100)
+(def ^:dynamic *trial-count* 50)
 
 (def shallow-data-gen
   (g/one-of
