@@ -4,6 +4,8 @@
 
 ![Converging Tracks](https://raw.githubusercontent.com/escherize/tracks/master/tracks.jpg)
 
+[![Build Status](https://travis-ci.org/escherize/tracks.svg?branch=master)](https://travis-ci.org/escherize/tracks)
+
 > Be the change that you wish to see in the world
 
 > -- Mahatma Gandhi
@@ -18,7 +20,6 @@ Require tracks in your namespace header:
 
 
     (:require [tracks.core :as t :refer [track]])
-
 
 ## Rationale
 
@@ -39,7 +40,6 @@ Below, the function returned by `track` will move the value at `:a` to `:b`, and
 (swap-a-b {:a 100 :b 3000})
 
 ;;=> {:a 3000 :b 100}
-
 ```
 
 You might say it's a bit like rename-keys, but we can move positions in vectors (and lists! (but not sets)) the exact same way:
