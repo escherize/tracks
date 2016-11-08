@@ -1,8 +1,5 @@
 (ns tracks.core
-  (:refer-clojure :exclude [let])
-  (:require [tracks.tracks :as tracks]))
-
-(def track tracks/track)
+  (:refer-clojure :exclude [let]))
 
 (defn- symbol-paths [x]
   (letfn [(f [x p]
@@ -49,3 +46,8 @@
                         [k `(path->value ~v ~sym)])
                       paths)]
        ~@body)))
+
+(defmacro track [inn outt]
+  `(fn [in#]
+     (let [~inn in#]
+       ~outt)))

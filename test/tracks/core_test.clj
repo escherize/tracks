@@ -30,10 +30,10 @@
                   (= (first (keys out)) (get-in in (first (vals out)))))))
 
 (deftest tracks-is-non-destructive
-  (is (= {:b 1 :c 2}
-         ((t/track {:a 1} {:b 1}) {:a 1 :c 2})))
+  (is (= {:b 1 :c 2} ;; <- notice c is unchanged.
+         ((t/track {:a a} {:b a}) {:a 1 :c 2})))
   (is (= {:b 1 :c 2 :d 3}
-         ((t/track {:a 1} {:b 1}) {:a 1 :c 2 :d 3}))))
+         ((t/track {:a a} {:b a}) {:a 1 :c 2 :d 3}))))
 
 (defspec complex-maps
   *trial-count*
@@ -60,35 +60,37 @@
 (deftest track-works
   (testing "can move keys"
     (is (= {:b "!!"}
-           ((t/track {:a 1} {:b 1})
+           ((t/track {:a value} {:b value})
             {:a "!!"}))))
 
   (testing "swap vectors"
     (is (= [:a :b]
-           ((t/track [0 1] [1 0])
+           ((t/track [f s] [s f])
             [:b :a])))
     (is (= [:a :c :b]
-           ((t/track [0 1 2] [0 2 1])
+           ((t/track [f s t] [f t s])
             [:a :b :c]))))
 
   (testing "can move + swap vectors"
-    (let [a-to-b-and-reverse (t/track {:a [0 1]} {:b [1 0]})]
+    (let [a-to-b-and-reverse (t/track {:a [f s]} {:b [s f]})]
       (is (= {:b [:one :zero]}
              (a-to-b-and-reverse
               {:a [:zero :one]}))))))
 
+;; depreciated - tracks does not work with lists.
+#_
 (deftest track-with-lists
   (testing "swap lists"
     (is (= '(:a :b)
-           ((t/track '(0 1) '(1 0))
+           ((t/track (a b) (b a))
             '(:b :a))))
     (is (= '(:a :c :b)
-           ((t/track '(0 1 2) '(0 2 1))
+           ((t/track (a b c) (a c b))
             '(:a :b :c))))))
 
 (deftest rotation
-  (let [rotate-players (t/track {:active-player 1 :players [2 3 4]}
-                                {:active-player 2 :players [3 4 1]})
+  (let [rotate-players (t/track {:active-player a :players [b c d]}
+                                {:active-player b :players [c d a]})
         initial-game {:active-player {:name "A"} ;;<- note the more complex leaf!
                       :players [{:name "B"}
                                 {:name "C"}
@@ -104,7 +106,6 @@
     (swap! game rotate-players)
     (swap! game rotate-players)
     (is (= initial-game @game))))
-
 
 (deftest testing-let
   (is (= "Hello World!"
