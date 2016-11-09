@@ -66,12 +66,13 @@ Destructuring complex nested data structures can be a real pain. Tracks makes th
 Below, the function returned by `track` will take a map with keys `:a` and `:b` and move the value at `:a` to `:b`, and the value at `:b` to `:a`:
 
 ``` clojure
-(track {:a one :b 2}
-       {:a 2 :b one})
+(track {:a one :b two}
+       {:a two :b one})
 
 ;;=> anonymous fn
 
-(def swap-a-b (track {:a one :b 2} {:a 2 :b one}))
+(def swap-a-b (track {:a one :b two}
+              {:a two :b one}))
 (swap-a-b {:a 100 :b 3000})
 
 ;;=> {:a 3000 :b 100}
@@ -80,7 +81,7 @@ Below, the function returned by `track` will take a map with keys `:a` and `:b` 
 `deftrack` does the same thing, but binds it too:
 
 ``` clojure
-(deftrack swap-a-b {:a one :b 2} {:a 2 :b one})
+(deftrack swap-a-b {:a one :b two} {:a two :b one})
 (swap-a-b {:a 100 :b 3000})
 
 ;;=> {:a 3000 :b 100}
@@ -89,7 +90,9 @@ Below, the function returned by `track` will take a map with keys `:a` and `:b` 
 We can move positions in vectors and deeply nested maps in exactly the same way:
 
 ```clojure
-((track {:a [0 one]} {:b [one 0]}) {:a [:zero :one]})
+((track {:a [zero one]}
+        {:b [one zero]})
+  {:a [:zero :one]})
 
 ;; => {:b [:one :zero]}
 ```
