@@ -41,7 +41,7 @@ It's common to grapple with large maps whose shapes are uncomfortable to reason 
 
 ### track/let
 
-Destructuring complex nested data structures can be a real pain. Tracks makes this easy. Much like `clojure.core/let`, symbols in the track pattern will be bound to the value and available the body. Unliek `clojure.core/let` we supply a binding form of *the same shape* as the data we are interested in.
+Destructuring complex nested data structures can be a real pain. Tracks makes this easy. Much like `clojure.core/let`, symbols in the track pattern will be bound to the value and available the body. Unlike `clojure.core/let` we supply a binding form of *the same shape* as the data we are interested in.
 
 ```clojure
 
