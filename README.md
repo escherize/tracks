@@ -99,7 +99,7 @@ We can move positions in vectors and deeply nested maps in exactly the same way:
 
 ### Arbitrary nesting levels
 
-Deep thinking about deepy nested shapes is a bygone era:
+Deep thinking about deeply nested shapes is a bygone era:
 
 ``` clojure
 (deftrack deeptx
