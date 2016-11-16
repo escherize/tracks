@@ -168,42 +168,10 @@ Like a train track, sometimes one track can split into many. With `track` the va
 ```
 ## How it works
 
-<<<<<<< HEAD
-Note well: key paths not operated on by the function returned by `track` (`[:c]` and `[:d]`) aren't edited.
-
-<<<<<<< HEAD
-## Let-track macro for simple destructuring
-=======
-## track/let macro for simple destructuring
->>>>>>> escherize/master
-
-Destructuring complex nested data structures can be a real pain. Tracks makes this easy.
-
-Much like a regular `let`, symbols in the track pattern will be bound to the value and available the body.
-
-```clojure
-
-<<<<<<< HEAD
-(let-track [{:a special-symbol} {:a "Hello World!"}]
-  special-symbol)
-=======
-(t/let [{:a {:b special-symbol}} {:a {:b "Hello World!"}}]
-  special-symbol)
-
->>>>>>> escherize/master
-;;=> "Hello World!"
-
-```
-
-<<<<<<< HEAD
-=======
-track/let also allows you to combine values in a way that `track` does not.
-=======
 `track` is implemented in terms of `let`
 
 ``` clojure
 (def move-a-key (track {:x one} {:y one}))
->>>>>>> escherize/master
 
 (move-a-key {:x "MoveMe"})
 
@@ -214,12 +182,7 @@ track/let also allows you to combine values in a way that `track` does not.
 ;;=> {:y [:a :b :c]}
 ```
 
-<<<<<<< HEAD
->>>>>>> escherize/master
-## Other things
-=======
 We see it moves any value from keypath [:x] to keypath [:y].
->>>>>>> escherize/master
 
 The way it does it is by moving `{:x one}` into a `let` like so:
 
