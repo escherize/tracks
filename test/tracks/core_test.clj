@@ -27,6 +27,11 @@
   (prop/for-all [m shallow-map-gen]
                 (let [map-two (zipmap (keys m) (shuffle (vals m)))]
                   (= map-two ((t/track m map-two) m)))))
+(deftest track-let
+  (testing "multiple bindings"
+    (is (= 2 (t/let [{:a a} {:a 1}
+                     b      (+ a a)]
+                b)))))
 
 (deftest track-let
   (testing "multiple bindings"
