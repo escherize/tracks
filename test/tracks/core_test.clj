@@ -33,12 +33,6 @@
                      b      (+ a a)]
                 b)))))
 
-(deftest track-let
-  (testing "multiple bindings"
-    (is (= 2 (t/let [{:a a} {:a 1}
-                     b      (+ a a)]
-               b)))))
-
 (deftest track-works
   (testing "can move keys"
     (is (= {:b "!!"}
