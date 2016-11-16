@@ -22,12 +22,17 @@
                ;; 100 tries not 10.
                100))
 
-
 (defspec shallow-maps-shuffled-keys
   *trial-count*
   (prop/for-all [m shallow-map-gen]
                 (let [map-two (zipmap (keys m) (shuffle (vals m)))]
                   (= map-two ((t/track m map-two) m)))))
+
+(deftest track-let
+  (testing "multiple bindings"
+    (is (= 2 (t/let [{:a a} {:a 1}
+                     b      (+ a a)]
+               b)))))
 
 (deftest track-works
   (testing "can move keys"
@@ -71,13 +76,13 @@
 (deftest testing-let
   (is (= "Hi Hello!!!???"
          (t/let [{:a hi :b hello :c [one two]} {:a "Hi" :b "Hello" :c ["!!" "???"]}
-                 {:punk punk} { :punk "!"}]
+                 {:punk punk} {:punk "!"}]
            (str hi " " hello punk one two))))
 
   (is (= "Hello World!"
          (let [bang "!"]
            (t/let [{:a hi :b hello} {:a "Hello" :b "World"}
-                   {:punk punk} { :punk bang}]
+                   {:punk punk} {:punk bang}]
              (str hi " " hello punk)))))
 
   (testing "going deeper"

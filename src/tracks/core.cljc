@@ -30,22 +30,20 @@
   (assert-args
    (vector? bindings) "a vector for its binding"
    (even? (count bindings)) "an even number of forms in binding vector")
-  (let* [val-syms (repeatedly gensym)
-         paths (->> bindings
-                    (take-nth 2)
-                    (map (fn [sym struct]
-                           (->> struct
-                                symbol-paths
-                                (map (fn [[k v]]
-                                       [k [sym v]]))
-                                (into {})))
-                         val-syms)
-                    (apply merge))]
-    `(let* [~@(mapcat vector val-syms (take-nth 2 (next bindings)))
-            ~@(mapcat (fn [[k [sym v]]]
-                        [k `(path->value ~v ~sym)])
-                      paths)]
-       ~@body)))
+  (let* [paths (->> bindings
+                    (partition 2)
+                    (map (fn [[tpatt input]] 
+                            [(gensym) tpatt input]))
+                    (mapcat
+                      (fn [[sym tpatt input]]
+                        (->> tpatt
+                             symbol-paths
+                             (mapcat 
+                                (fn [[k v]]
+                                  [k `(path->value ~v ~sym)]))
+                             (concat [sym input]))))
+                    (vec))]
+    `(let* ~paths ~@body)))
 
 (defmacro track [in & outs]
   `(fn [in#]
