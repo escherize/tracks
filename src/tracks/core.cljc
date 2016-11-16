@@ -1,8 +1,5 @@
 (ns tracks.core
-  (:refer-clojure :exclude [let])
-  (:require [tracks.tracks :as tracks]))
-
-(def track tracks/track)
+  (:refer-clojure :exclude [let]))
 
 (defn- symbol-paths [x]
   (letfn [(f [x p]
@@ -33,7 +30,7 @@
   (assert-args
    (vector? bindings) "a vector for its binding"
    (even? (count bindings)) "an even number of forms in binding vector")
-  (let* [val-syms (repeatedly (/ (count bindings) 2) gensym)
+  (let* [val-syms (repeatedly gensym)
          paths (->> bindings
                     (take-nth 2)
                     (map (fn [sym struct]
@@ -49,3 +46,11 @@
                         [k `(path->value ~v ~sym)])
                       paths)]
        ~@body)))
+
+(defmacro track [in & outs]
+  `(fn [in#]
+     (let [~in in#]
+       ~@outs)))
+
+(defmacro deftrack [name in & outs]
+  `(def ~name (track ~in ~@outs)))

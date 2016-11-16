@@ -1,7 +1,6 @@
 (ns tracks.core-test
   (:require [clojure.test :refer :all]
             [tracks.core :as t]
-            [tracks.tracks :as tracks]
             [clojure.test.check :as tc]
             [clojure.test.check.generators :as g]
             [clojure.test.check.properties :as prop]
@@ -9,7 +8,7 @@
 
 (def scalar (g/one-of [g/char g/int g/string-alphanumeric g/keyword]))
 
-(def ^:dynamic *trial-count* 100)
+(def ^:dynamic *trial-count* 50)
 
 (def shallow-data-gen
   (g/one-of
@@ -23,27 +22,6 @@
                ;; 100 tries not 10.
                100))
 
-(defspec simple-paths
-  *trial-count*
-  (prop/for-all [m shallow-map-gen]
-                (let [[in out] ((juxt identity (comp tracks/paths tracks/->m)) m)]
-                  (= (first (keys out)) (get-in in (first (vals out)))))))
-
-(deftest tracks-is-non-destructive
-  (is (= {:b 1 :c 2}
-         ((t/track {:a 1} {:b 1}) {:a 1 :c 2})))
-  (is (= {:b 1 :c 2 :d 3}
-         ((t/track {:a 1} {:b 1}) {:a 1 :c 2 :d 3}))))
-
-(defspec complex-maps
-  *trial-count*
-  (prop/for-all [in shallow-map-gen]
-                (let [leafs (keys (tracks/paths (tracks/->m in)))
-                      out-paths (repeatedly (count leafs) #(g/sample scalar))
-                      out (->> (map #(assoc-in {} %1 %2) out-paths leafs)
-                               (apply merge))
-                      in->out (t/track in out)]
-                  (= out (in->out in)))))
 
 (defspec shallow-maps-shuffled-keys
   *trial-count*
@@ -51,44 +29,29 @@
                 (let [map-two (zipmap (keys m) (shuffle (vals m)))]
                   (= map-two ((t/track m map-two) m)))))
 
-(deftest deeper-map-path
-  (let [in-map {:a ["one" "two"]}
-        p (tracks/paths (tracks/->m in-map))]
-    (is (= p {"one" [:a 0]
-              "two" [:a 1]}))))
-
 (deftest track-works
   (testing "can move keys"
     (is (= {:b "!!"}
-           ((t/track {:a 1} {:b 1})
+           ((t/track {:a value} {:b value})
             {:a "!!"}))))
 
   (testing "swap vectors"
     (is (= [:a :b]
-           ((t/track [0 1] [1 0])
+           ((t/track [f s] [s f])
             [:b :a])))
     (is (= [:a :c :b]
-           ((t/track [0 1 2] [0 2 1])
+           ((t/track [f s t] [f t s])
             [:a :b :c]))))
 
   (testing "can move + swap vectors"
-    (let [a-to-b-and-reverse (t/track {:a [0 1]} {:b [1 0]})]
+    (let [a-to-b-and-reverse (t/track {:a [f s]} {:b [s f]})]
       (is (= {:b [:one :zero]}
              (a-to-b-and-reverse
               {:a [:zero :one]}))))))
 
-(deftest track-with-lists
-  (testing "swap lists"
-    (is (= '(:a :b)
-           ((t/track '(0 1) '(1 0))
-            '(:b :a))))
-    (is (= '(:a :c :b)
-           ((t/track '(0 1 2) '(0 2 1))
-            '(:a :b :c))))))
-
 (deftest rotation
-  (let [rotate-players (t/track {:active-player 1 :players [2 3 4]}
-                                {:active-player 2 :players [3 4 1]})
+  (let [rotate-players (t/track {:active-player a :players [b c d]}
+                                {:active-player b :players [c d a]})
         initial-game {:active-player {:name "A"} ;;<- note the more complex leaf!
                       :players [{:name "B"}
                                 {:name "C"}
@@ -106,10 +69,10 @@
     (is (= initial-game @game))))
 
 (deftest testing-let
-  (is (= "Hello World!"
-         (t/let [{:a hi :b hello} {:a "Hello" :b "World"}
+  (is (= "Hi Hello!!!???"
+         (t/let [{:a hi :b hello :c [one two]} {:a "Hi" :b "Hello" :c ["!!" "???"]}
                  {:punk punk} { :punk "!"}]
-           (str hi " " hello punk))))
+           (str hi " " hello punk one two))))
 
   (is (= "Hello World!"
          (let [bang "!"]
@@ -124,11 +87,59 @@
                       :b {:d {:e {:f [_ _ hello]}}}}
                      {:a [0 1 2 3 "Hello"]
                       :b {:d {:e {:f ["ignore" "me" "World"]}}}}
-                     {:punk punk} { :punk bang}]
+                     {:punk punk} {:punk bang}]
                (str hi " " hello punk))))))
 
   (is (nil? (t/let [])))
 
   (is (= 1 (t/let [a 1] a)))
 
-  (is (nil? (t/let [a 1]))))
+  (is (nil? (t/let [a 10]))))
+
+(deftest track-is-fn
+
+  (is (= 4000
+         ((t/track {:a a}
+                   (clojure.core/let [x (+ a a)]
+                     (* x a x)))
+          {:a 10})))
+
+  (is (= [43 53 63 46 56 66 49 59 69]
+         (mapv
+          (t/track {:a {:a {:a a}} :b {:b {:b {:b b}}}} (+ a a a b))
+          (for [a [1 2 3] b [40 50 60]]
+            {:a {:a {:a a}} :b {:b {:b {:b b}}}})))))
+
+(deftest multi-track
+  (is (= [1 1 1] ((t/track [x] [x x x]) [1])))
+
+  (is (= [2 2 2] ((t/track [x] [x x x]) [2])))
+
+  (is (= {:b "ayee", :c "ayee"}
+         ((t/track {:a a} {:b a :c a}) {:a "ayee"}))))
+
+(deftest deftrack
+  (t/deftrack swap-a-and-b
+    {:a pop}
+    (println pop)
+    {:b pop})
+
+  (is (= {:b "???"}
+         (swap-a-and-b {:a "???"}))))
+
+;; deprecated - tracks does not work with lists.
+#_(deftest track-with-lists
+    (testing "swap lists"
+      (is (= '(:a :b)
+             ((t/track (a b) (b a))
+              '(:b :a))))
+      (is (= '(:a :c :b)
+             ((t/track (a b c) (a c b))
+              '(:a :b :c))))))
+
+;; deprecated - tracks is destructive, but you can write your own.
+#_(deftest tracks-is-non-destructive
+    (is (= {:b 1 :c 2} ;; <- notice c is unchanged.
+           ((t/track {:a a} {:b a}) {:a 1 :c 2})))
+    (is (= {:b 1 :c 2 :d 3}
+           ((t/track {:a a} {:b a}) {:a 1 :c 2 :d 3}))))

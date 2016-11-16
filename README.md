@@ -4,9 +4,11 @@
 
 ![Converging Tracks](https://raw.githubusercontent.com/escherize/tracks/master/tracks.jpg)
 
-> Be the change that you wish to see in the world
+[![Build Status](https://travis-ci.org/escherize/tracks.svg?branch=master)](https://travis-ci.org/escherize/tracks)
 
-> -- Mahatma Gandhi
+> We become what we behold. We shape our tools, and thereafter our tools shape us.
+
+> ― Marshall McLuhan
 
 ## Usage
 
@@ -16,96 +18,98 @@ Add the following line to your leiningen dependencies:
 
 Require tracks in your namespace header:
 
-
     (:require [tracks.core :as t :refer [track]])
-
 
 ## Rationale
 
-Often we find ourselves with large maps that are uncomfortable to reason about.
+This is a library dedicated to the concept of *shape*.
 
-This library simplifies transformations and destructuring of Clojure datastructures. Instead of describing how to do a transformation, tracks allows you to create those transformations by __example__.  This makes writing glue code that takes giant maps of one shape and transforms them into another *dead simple*.
+    shape n.
+        - the external form, contours, or outline of something.
+        - the correct or original form or contours of something.
+        - an example of something that has a particular form.
 
+    shape v.
+        - to give definite form, organization, or character to.
+        - fashion or form.
+
+It's common to grapple with large maps whose shapes are uncomfortable to reason about.
+
+`tracks` simplifies transformations and destructuring of Clojure datastructures. Instead of describing how to do a transformation, tracks allows the user to create those transformations by __example__.  This makes writing complex code that takes one shape and transforms them to another *dead simple*.
 
 ## Examples
 
-`track` returns a function that sets up "rails" which turn its first argument into its second argument.
+### track/let
 
-Below, the function returned by `track` will move the value at `:a` to `:b`, and the value from `:b` to `:a`:
+Destructuring complex nested data structures can be a real pain. Tracks makes this easy. Much like `clojure.core/let`, symbols in the track pattern will be bound to the value and available the body. Unlike `clojure.core/let` we supply a binding form of *the same shape* as the data we are interested in.
+
+```clojure
+
+(t/let [{:a {:b [greeting person]}} ;;<- binding form
+        {:a {:b ["Hello" "World"]}} ;;<- data we want to get at
+        ]
+  (str greeting " " person "!"))
+
+;;=> "Hello World!"
+
+(t/let [{:a {:b x} :c {:d y}}
+        {:a {:b 1} :c {:d 2}}]
+  (+ x y))
+
+;;=> 3
+
+```
+### track/track for building functions
+
+`track` returns a function which takes data of the shape of its first argument.
+
+Below, the function returned by `track` will take a map with keys `:a` and `:b` and move the value at `:a` to `:b`, and the value at `:b` to `:a`:
 
 ``` clojure
-(def swap-a-b (track {:a 1 :b 2}
-                     {:a 2 :b 1}))
+(track {:a one :b two}
+       {:a two :b one})
+
+;;=> anonymous fn
+
+(def swap-a-b (track {:a one :b two}
+              {:a two :b one}))
 (swap-a-b {:a 100 :b 3000})
 
 ;;=> {:a 3000 :b 100}
-
 ```
 
-You might say it's a bit like rename-keys, but we can move positions in vectors (and lists! (but not sets)) the exact same way:
+`deftrack` does the same thing, but binds it too:
+
+``` clojure
+(deftrack swap-a-b {:a one :b two} {:a two :b one})
+(swap-a-b {:a 100 :b 3000})
+
+;;=> {:a 3000 :b 100}
+```
+
+We can move positions in vectors and deeply nested maps in exactly the same way:
 
 ```clojure
+((track {:a [zero one]}
+        {:b [one zero]})
+  {:a [:zero :one]})
 
-((track {:a [0 1]} {:b [1 0]}) {:a [:zero :one]})
 ;; => {:b [:one :zero]}
-
 ```
-
-`track` also supports arbitrary nesting levels:
 
 ### Arbitrary nesting levels
 
-worrying about nesting is a thing of the past:
+Deep thinking about deeply nested shapes is a bygone era:
 
 ``` clojure
-(def deeptransform
-  (track {0 0 1 1 2 2 3 3}
-         {:a 0 :b {:c 1 :d {:e 2 :f {:g 3}}}}))
+(deftrack deeptx
+  {0 zero, 1 one, 2 two, 3 three} ;; <- deeptx takes a map with this shape
+  {:a zero :b {:c one :d {:e two :f {:g three}}}} ;; <- deeptx then returns one with this shape
+  )
 
-(deeptransform {0 "first" 1 "sec" 2 "therd" 3 "feor"})
-;;=> {:a "first", :b {:c "sec", :d {:e "therd", :f {:g "feor"}}}}
+(deeptx {0 "first" 1 "second" 2 "third" 3 "fourth"})
+;;=> {:a "first", :b {:c "second", :d {:e "third", :f {:g "fourth"}}}}
 ```
-
-Next, we do something strange, in an understandable and concise manner:
-
-```clojure
-(def deep-ways
-  (track {0 "can" 1 "use" 2 "any" 3 "scalar value."}
-         {:a "can" :b {:c "use" :d {:e "any" :f {:g "scalar value."}}}}))
-
-(deep-ways {0 "first" 1 "sec" 2 "therd" 3 "feor"})
-;; => {:a "first" :b {:c "sec" :d {:e "therd" :f {:g "feor"}}}}
-
-
-;; Without track this is not a clear concise operation:
-(let [input {0 "first" 1 "sec" 2 "therd" 3 "feor"}]
-     {:a (get input 0)
-      :b {:c (get input 1)
-          :d {:e (get input 2)}
-              :f {:g (get input 3)}}})
-
-```
-
-
-## How it works
-
-The numbers 1 and 2 below are used to dicate *positions* which are leafs in the transformation that will be operated on. 1 and 2 could be any **unique** scalar values like "the thing at a" or ::my-piece-of-data -- any scalar value will work.
-
-``` clojure
-(def move-a-key (track {:x 1} {:y 1}))
-(move-a-key {:x "MoveMe"})
-;;=> {:y "MoveMe"}
-
-```
-Let's examine what happens with `move-a-key`. `track` notices the common leaf: `1`. Because the *keypaths* to 1 are [:x] in the first arg and [:y] in the second, `track` returns a function that dissocs the value at [:x] from the input to `move-a-key` and assocs its into path [:y]. Here we give move-a-key the string "MoveMe", but we could just as well have given it any datastructure:
-
-``` clojure
-(def move-a-key (track {:x 1} {:y 1}))
-(move-a-key {:x [:a :b :c]})
-;;=> {:y [:a :b :c]}
-```
-We see it moved from keypath [:x] to keypath [:y].
-
 ### Complex leaf values
 
 `track` greatly simplifies rotating values, too:
@@ -118,9 +122,9 @@ Let's simulate a game where there's an active player, and all other players wait
 ;;; no matter what datastructure the players are
 ;;; represented as:
 
-(def move-players
-  (tracks {:active-player 1 :players [2 3 4]}
-          {:active-player 2 :players [3 4 1]}))
+(deftrack move-players
+  {:active-player p1 :players [p2 p3 p4]}
+  {:active-player p2 :players [p3 p4 p1]})
 
 ;;; Here's the datastructure that represents the state of the game.
 ;;; Notice that the players are more than scalar values!
@@ -151,38 +155,20 @@ Let's simulate a game where there's an active player, and all other players wait
 
 ```
 
-## Using functions with track
+### Multiple endpoints
 
-Sometimes we want more than a transformation that doesn't update its keys. That's why `track` optionally taks a map containing functions to apply to leafs.
-
-``` clojure
-(def swap-and-inc
-  (track
-    {:here 1}
-    {:now {:its {:here [1 "<- and its one larger."]}}}
-    {1 inc} ;;<- means call inc on the value at position 1
-    ))
-(swap-and-inc {:here 100})
-;;=> {:now {:its {:here [101 "<- and its one larger."]}}}
-```
-
-## Partial updating values with track
-
-Often we only want to update a subset of a datastructure:
+Like a train track, sometimes one track can split into many. With `track` the values can be duplicated.
 
 ``` clojure
+(deftrack one-to-many x {:a x :b {:c [x x]}})
 
-(def transfer-a-to-b (track {:a 1} {:b 1}))
+(one-to-many "?")
 
-(transfer-a-to-b {:a 1 :c 2})
-;;=> {:b 1 :c 2}
-
-
-(transfer-a-to-b {:a 1 :c 2 :d 3})
-;;=> {:b 1 :c 2 :d 3}
-
+;;=> {:a "?", :b {:c ["?" "?"]}}
 ```
+## How it works
 
+<<<<<<< HEAD
 Note well: key paths not operated on by the function returned by `track` (`[:c]` and `[:d]`) aren't edited.
 
 <<<<<<< HEAD
@@ -212,30 +198,37 @@ Much like a regular `let`, symbols in the track pattern will be bound to the val
 <<<<<<< HEAD
 =======
 track/let also allows you to combine values in a way that `track` does not.
-
-```clojure
-
-(t/let [{:a {:b one} :c {:d two}} {:a {:b 1} :c {:d 2}}]
-  (+ one two))
-
-;;=> 3
-
-```
-
->>>>>>> escherize/master
-## Other things
-
-If leaf values don't exist in both the first and second arguments, then they are untouched in the input (like `"??"` below).
+=======
+`track` is implemented in terms of `let`
 
 ``` clojure
-(def zed (track {:a [0 1] :z "??"} {:b [1 0]}))
+(def move-a-key (track {:x one} {:y one}))
+>>>>>>> escherize/master
 
-(zed {:a [:zero :one]})
-;; => {:b [:one :zero]}
+(move-a-key {:x "MoveMe"})
 
-(zed {:a ["ONE" "TWO"] :z "this will be left alone" :c "as will this."})
-;;=> {:b ["TWO" "ONE"] :z "this will be left alone" :c "as will this."}
+;;=> {:y "MoveMe"}
 
+(move-a-key {:x [:a :b :c]})
+
+;;=> {:y [:a :b :c]}
+```
+
+<<<<<<< HEAD
+>>>>>>> escherize/master
+## Other things
+=======
+We see it moves any value from keypath [:x] to keypath [:y].
+>>>>>>> escherize/master
+
+The way it does it is by moving `{:x one}` into a `let` like so:
+
+``` clojure
+          ;; vvvvvvvv---- this is the first arg to track
+(tracks/let [{:x one} input]
+    ;; so now one is bound to (get input :x)
+ ;;  vvvvvv---- this is the 2nd arg to track
+    {:y one})
 ```
 
 ## Want more examples?

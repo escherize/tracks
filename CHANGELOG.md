@@ -1,11 +1,16 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log loosely follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## [0.1.7] - 2016-11-03
+### Breaking Changes
+- `track` is now a macro and works only with symbols
+### Added
+- `track` is now implemented in terms of let
+
+
 ## [0.1.5] - 2016-11-03
 ### Added
 - `tracks.core/let` - let macro!
-
-
 
 ## [0.1.4] - 2016-10-16
 ### Added
