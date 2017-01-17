@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log loosely follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## [1.0.1] - 2016-1-17
+### Breaking Changes
+- `track` is now a thin layer over let + I reccomend using track/let more often.
+
 ## [0.1.7] - 2016-11-03
 ### Breaking Changes
 - `track` is now a macro and works only with symbols
