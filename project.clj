@@ -1,4 +1,4 @@
-(defproject tracks "1.0.1"
+(defproject tracks "1.0.3"
   :description "Example based function generation"
   :url "https://github.com/escherize/tracks"
   :license {:name "Eclipse Public License"

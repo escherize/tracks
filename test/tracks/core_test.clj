@@ -100,7 +100,7 @@
   (is (= {:a "ayee+ayee", :b "ayee", :c "ayee"}
          ((track {:a a} {:a (str a "+" a) :b a :c a}) {:a "ayee"}))))
 
-(deftest deftfn-test
+(deftest deftrack-test
   (try (deftrack ab {:a pop} {:b pop})
        (is (= {:b "???"} (ab {:a "???"})))
        (finally (ns-unmap *ns* 'ab))))
