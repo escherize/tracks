@@ -1,7 +1,9 @@
 (ns tracks.core
   (:refer-clojure :exclude [let]))
 
-(defn- symbol-paths [x]
+(alias 'cc 'clojure.core)
+
+(defn symbol-paths [x]
   (letfn [(f [x p]
             (cond
               (symbol? x) {x p}
@@ -22,7 +24,7 @@
   `(do (when-not ~(first pairs)
          (throw (IllegalArgumentException.
                  (str (first ~'&form) " requires " ~(second pairs) " in " ~'*ns* ":" (:line (meta ~'&form))))))
-       ~(clojure.core/let [more (nnext pairs)]
+       ~(cc/let [more (nnext pairs)]
           (when more
             (list* `assert-args more)))))
 
@@ -32,23 +34,42 @@
    (even? (count bindings)) "an even number of forms in binding vector")
   (let* [paths (->> bindings
                     (partition 2)
-                    (map (fn [[tpatt input]] 
-                            [(gensym) tpatt input]))
+                    (map (fn [[tpatt input]]
+                           [(gensym) tpatt input]))
                     (mapcat
-                      (fn [[sym tpatt input]]
-                        (->> tpatt
-                             symbol-paths
-                             (mapcat 
-                                (fn [[k v]]
-                                  [k `(path->value ~v ~sym)]))
-                             (concat [sym input]))))
+                     (fn [[sym tpatt input]]
+                       (->> tpatt
+                            symbol-paths
+                            (mapcat
+                             (fn [[k v]]
+                               [k `(path->value ~v ~sym)]))
+                            (concat [sym input]))))
                     (vec))]
     `(let* ~paths ~@body)))
 
+(defn dissoc-in
+  "Dissociates an entry from a nested associative structure returning a new
+  nested structure. keys is a sequence of keys. Any empty maps that result
+  will not be present in the new structure."
+  [m [k & ks :as keys]]
+  (if ks
+    (if-let [nextmap (get m k)]
+      (cc/let [newmap (dissoc-in nextmap ks)]
+        (if (seq newmap)
+          (assoc m k newmap)
+          (dissoc m k)))
+      m)
+    (dissoc m k)))
+
+(defn dissoc-all-in [m paths]
+  (reduce (fn [m path] (dissoc-in m path)) m paths))
+
+(defmacro clean-keys [in out]
+  `(dissoc-all-in '~out (vals (symbol-paths '~in))))
+
 (defmacro track [in & outs]
-  `(fn [in#]
-     (let [~in in#]
-       ~@outs)))
+  `(fn [x#]
+     (let [~in x#] ~@outs)))
 
 (defmacro deftrack [name in & outs]
-  `(def ~name (track ~in ~@outs)))
+  `(def ~name (tfn ~in ~@outs)))

@@ -1,6 +1,6 @@
 (ns tracks.core-test
   (:require [clojure.test :refer :all]
-            [tracks.core :as t]
+            [tracks.core :as t :refer :all :exclude [let]]
             [clojure.test.check :as tc]
             [clojure.test.check.generators :as g]
             [clojure.test.check.properties :as prop]
@@ -26,36 +26,31 @@
   *trial-count*
   (prop/for-all [m shallow-map-gen]
                 (let [map-two (zipmap (keys m) (shuffle (vals m)))]
-                  (= map-two ((t/track m map-two) m)))))
-(deftest track-let
+                  (= map-two ((track m map-two) m)))))
+(deftest t-let
   (testing "multiple bindings"
     (is (= 2 (t/let [{:a a} {:a 1}
                      b      (+ a a)]
-                b)))))
+               b)))))
 
-(deftest track-works
+(deftest tracks-works
   (testing "can move keys"
     (is (= {:b "!!"}
-           ((t/track {:a value} {:b value})
+           ((track {:a value} {:b value})
             {:a "!!"}))))
 
   (testing "swap vectors"
-    (is (= [:a :b]
-           ((t/track [f s] [s f])
-            [:b :a])))
-    (is (= [:a :c :b]
-           ((t/track [f s t] [f t s])
-            [:a :b :c]))))
+    (is (= [:a :b] ((track [f s] [s f]) [:b :a])))
+    (is (= [:a :c :b] ((track [f s t] [f t s]) [:a :b :c]))))
 
   (testing "can move + swap vectors"
-    (let [a-to-b-and-reverse (t/track {:a [f s]} {:b [s f]})]
-      (is (= {:b [:one :zero]}
-             (a-to-b-and-reverse
-              {:a [:zero :one]}))))))
+    (let [a-to-b-and-reverse (track {:a [f s]} {:b [s f]})]
+      (is (= {:b [1 0]}
+             (a-to-b-and-reverse {:a [0 1]}))))))
 
 (deftest rotation
-  (let [rotate-players (t/track {:active-player a :players [b c d]}
-                                {:active-player b :players [c d a]})
+  (let [rotate-players (track {:active-player a :players [b c d]}
+                            {:active-player b :players [c d a]})
         initial-game {:active-player {:name "A"} ;;<- note the more complex leaf!
                       :players [{:name "B"}
                                 {:name "C"}
@@ -93,57 +88,19 @@
                       :b {:d {:e {:f ["ignore" "me" "World"]}}}}
                      {:punk punk} {:punk bang}]
                (str hi " " hello punk))))))
-
   (is (nil? (t/let [])))
-
   (is (= 1 (t/let [a 1] a)))
-
   (is (nil? (t/let [a 10]))))
 
-(deftest track-is-fn
-
-  (is (= 4000
-         ((t/track {:a a}
-                   (clojure.core/let [x (+ a a)]
-                     (* x a x)))
-          {:a 10})))
-
-  (is (= [43 53 63 46 56 66 49 59 69]
-         (mapv
-          (t/track {:a {:a {:a a}} :b {:b {:b {:b b}}}} (+ a a a b))
-          (for [a [1 2 3] b [40 50 60]]
-            {:a {:a {:a a}} :b {:b {:b {:b b}}}})))))
-
 (deftest multi-track
-  (is (= [1 1 1] ((t/track [x] [x x x]) [1])))
-
-  (is (= [2 2 2] ((t/track [x] [x x x]) [2])))
-
+  (is (= [1 1 1] ((track [x] [x x x]) [1])))
+  (is (= [2 2 2] ((track [x] [x x x]) [2])))
   (is (= {:b "ayee", :c "ayee"}
-         ((t/track {:a a} {:b a :c a}) {:a "ayee"}))))
+         ((track {:a a} {:b a :c a}) {:a "ayee"})))
+  (is (= {:a "ayee+ayee", :b "ayee", :c "ayee"}
+         ((track {:a a} {:a (str a "+" a) :b a :c a}) {:a "ayee"}))))
 
-(deftest deftrack
-  (t/deftrack swap-a-and-b
-    {:a pop}
-    (println pop)
-    {:b pop})
-
-  (is (= {:b "???"}
-         (swap-a-and-b {:a "???"}))))
-
-;; deprecated - tracks does not work with lists.
-#_(deftest track-with-lists
-    (testing "swap lists"
-      (is (= '(:a :b)
-             ((t/track (a b) (b a))
-              '(:b :a))))
-      (is (= '(:a :c :b)
-             ((t/track (a b c) (a c b))
-              '(:a :b :c))))))
-
-;; deprecated - tracks is destructive, but you can write your own.
-#_(deftest tracks-is-non-destructive
-    (is (= {:b 1 :c 2} ;; <- notice c is unchanged.
-           ((t/track {:a a} {:b a}) {:a 1 :c 2})))
-    (is (= {:b 1 :c 2 :d 3}
-           ((t/track {:a a} {:b a}) {:a 1 :c 2 :d 3}))))
+(deftest deftfn-test
+  (try (deftrack ab {:a pop} {:b pop})
+       (is (= {:b "???"} (ab {:a "???"})))
+       (finally (ns-unmap *ns* 'ab))))
