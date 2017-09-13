@@ -1,8 +1,6 @@
 (ns tracks.core
   (:refer-clojure :exclude [let]))
 
-(alias 'cc 'clojure.core)
-
 (defn symbol-paths [x]
   (letfn [(f [x p]
             (cond
@@ -24,7 +22,7 @@
   `(do (when-not ~(first pairs)
          (throw (IllegalArgumentException.
                  (str (first ~'&form) " requires " ~(second pairs) " in " ~'*ns* ":" (:line (meta ~'&form))))))
-       ~(cc/let [more# (nnext pairs)]
+       ~(clojure.core/let [more# (nnext pairs)]
           (when more#
             (list* `assert-args more#)))))
 
@@ -54,7 +52,7 @@
   [m [k & ks :as keys]]
   (if ks
     (if-let [nextmap (get m k)]
-      (cc/let [newmap# (dissoc-in nextmap ks)]
+      (clojure.core/let [newmap# (dissoc-in nextmap ks)]
         (if (seq newmap#)
           (assoc m k newmap#)
           (dissoc m k)))
