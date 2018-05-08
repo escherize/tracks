@@ -25,7 +25,7 @@
 (defspec shallow-maps-shuffled-keys
   *trial-count*
   (prop/for-all [m shallow-map-gen]
-                (let [map-two (zipmap (keys m) (shuffle (vals m)))]
+                (let [map-two (zipmap (shuffle (keys m)) (vals m))]
                   (= map-two ((track m map-two) m)))))
 (deftest t-let
   (testing "multiple bindings"
@@ -95,6 +95,7 @@
 (deftest multi-track
   (is (= [1 1 1] ((track [x] [x x x]) [1])))
   (is (= [2 2 2] ((track [x] [x x x]) [2])))
+  (is (= [1 0 1 0] ((track [x y] [x y x y]) [1 0])))
   (is (= {:b "ayee", :c "ayee"}
          ((track {:a a} {:b a :c a}) {:a "ayee"})))
   (is (= {:a "ayee+ayee", :b "ayee", :c "ayee"}
