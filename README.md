@@ -3,7 +3,6 @@
 ## Example based coding
 
 ![Converging Tracks](https://raw.githubusercontent.com/escherize/tracks/master/tracks.jpg)
-
 [![Build Status](https://travis-ci.org/escherize/tracks.svg?branch=master)](https://travis-ci.org/escherize/tracks)
 
 > We become what we behold. We shape our tools, and thereafter our tools shape us.
@@ -22,99 +21,177 @@ Require tracks in your namespace header:
 
 ## Rationale
 
-This is a library dedicated to the concept of *shape*.
+This is a library to handle _shapes_. What's a shape?
 
     shape n.
-        - the external form, contours, or outline of something.
         - the correct or original form or contours of something.
         - an example of something that has a particular form.
 
     shape v.
         - to give definite form, organization, or character to.
-        - fashion or form.
 
-It's common to grapple with large maps whose shapes are uncomfortable to reason about.
-
-`tracks` simplifies transformations and destructuring of Clojure datastructures. Instead of describing how to do a transformation, tracks allows the user to create those transformations by __example__.  This makes writing complex code that takes one shape and transforms them to another *dead simple*.
+It's common to grapple with deeply nested arguments whose shapes are difficult to know without running the code. The data we love, tho pure and immutable can be nested and complex. This approach removes the cognitive burden needed to understand our datastructures.
 
 ## Examples
 
-### track/let
+#### deftrack example:
 
-Destructuring complex nested data structures can be a real pain. Tracks makes this easy. Much like `clojure.core/let`, symbols in the track pattern will be bound to the value and available the body. Unlike `clojure.core/let` we supply a binding form of *the same shape* as the data we are interested in.
+Instead of describing _how to do a transformation_, tracks allows the user to _create those transformations declaratively_.  This makes writing code that takes one shape and transforms them to another *dead simple*.
 
-```clojure
-
-(t/let [{:a {:b [greeting person]}} ;;<- binding form
-        {:a {:b ["Hello" "World"]}} ;;<- data we want to get at
-        ]
-  (str greeting " " person "!"))
-
-;;=> "Hello World!"
-
-(t/let [{:a {:b x} :c {:d y}}
-        {:a {:b 1} :c {:d 2}}]
-  (+ x y))
-
-;;=> 3
-
-```
-### track/track for building functions
-
-`track` returns a function which takes data of the shape of its first argument.
-
-Below, the function returned by `track` will take a map with keys `:a` and `:b` and move the value at `:a` to `:b`, and the value at `:b` to `:a`:
+Let's consider this data as our input. Typically this shape needs to be 'reverse-engineered' by reading and understanding code with `get-in`, destructuring, and other such operations.
 
 ``` clojure
-(track {:a one :b two}
-       {:a two :b one})
-
-;;=> anonymous fn
-
-(def swap-a-b (track {:a one :b two}
-              {:a two :b one}))
-(swap-a-b {:a 100 :b 3000})
-
-;;=> {:a 3000 :b 100}
+(def buyer-information-map
+  {:buyer-info
+   {:is-guest true
+    :primary-contact {:name {:first-name "Bob" :last-name "Ross"}
+                      :phone {:complete-number "123123123"}
+                      :email {:email-address "thebobguy@rossinator.com"}}}})
 ```
 
-`deftrack` does the same thing, but binds it too:
 
-``` clojure
-(deftrack swap-a-b {:a one :b two} {:a two :b one})
-(swap-a-b {:a 100 :b 3000})
+Next, Let's create a function that takes this particular _shape_ and returns another representing a notification for a customer.
 
-;;=> {:a 3000 :b 100}
-```
-
-We can move positions in vectors and deeply nested maps in exactly the same way:
 
 ```clojure
-((track {:a [zero one]}
-        {:b [one zero]})
-  {:a [:zero :one]})
+(require '[tracks.core :as t :refer [deftrack]])
 
-;; => {:b [:one :zero]}
+(deftrack notify-buyer
+  {:buyer-info {:is-guest guest?                                    ;; 1
+                :primary-contact {:name {:first-name firstname
+                                         :last-name lastname}
+                                  :phone {:complete-number phone}
+                                  :email {:email-address email}}}}
+  (when guest?                                                      ;; 2
+    {:command :send-notification
+     :address email
+     :phone phone
+     :text (str "Hi, " firstname " " lastname)}))
+;; => #function[user/notify-buyer]
+
+(notify-buyer buyer-information-map)
+;; => {:command :send-notification
+;;     :address "thebobguy@rossinator.com"
+;;     :phone "123123123"
+;;     :text "Hi, Bob Ross"}
+```
+
+1. `deftrack` expects data of this shape
+2. `deftrack` returns this value
+
+### What is going on here?
+
+For every symbol in the binding form to `deftrack` (1 above), `deftrack` generates a program to seamlessly write the get / get-in / assoc-in / assoc / etc. sort of accessing code and allows you to focus on __your data__.
+
+## Destructuring
+
+You may be thinking to yourself: Clojure already has destructuring! That's true, let's compare using `deftrack` against `defn` style destructuring:
+
+``` clojure
+(deftrack notify-buyer
+  {:buyer-info {:is-guest guest?
+                :primary-contact {:name {:first-name firstname
+                                         :last-name lastname}
+                                  :phone {:complete-number phone}
+                                  :email {:email-address email}}}}
+  (when guest?
+    {:command :send-notification
+     :address email
+     :phone phone
+     :text (str "Hi, " firstname " " lastname)}))
+
+(defn notify-buyer-2 [{{guest? :is-guest,
+                        {{firstname :first-name, lastname :last-name} :name,
+                         {phone :complete-number} :phone,
+                         {email :email-address} :email}
+                        :primary-contact}
+                       :buyer-info}]
+  (when guest?
+    {:command :send-notification
+     :address email
+     :phone phone
+     :text (str "Hi, " firstname " " lastname)}))
+```
+
+I think you'd agree which of those is easier to read.
+
+### deftrack metadata
+
+deftrack plays nice with arglists metadata, enabling your editor to explain what sort of shape a function created with `deftrack` takes.
+
+``` clojure
+(deftrack move-some-keys
+  {:a a :b b :c c :d {:e e}}
+  {:a b :b c :c e :d {:e a}})
+
+(move-some-keys {:a 1 :b 2 :c 3 :d {:e 4}})
+;; => {:a 2, :b 3, :c 4, :d {:e 1}}
+
+(:arglists (meta #'move-some-keys))
+;; => ([{a :a, b :b, c :c, {e :e} :d}])
+```
+
+Since we don't like to read deeply destructured arglists, `deftracks` also goes one step further, and includes what shape your function _expects_. (Todo: make this work with editors).
+
+``` clojure
+(:tracks/expects (meta #'move-some-keys))
+;; => {:a a, :b b, :c c, :d {:e e}}
+```
+
+#### let example
+
+For more flexible flowing of data, here's __tracks/let__, which allows for the same data-oriented style but with multiple arguments, etc.
+
+``` clojure
+(require '[tracks.core :as t :refer [deftrack]])
+
+;; Please Notice: you usually don't get to see what some-data looks like! :)
+(def some-data
+  {:more-info {:price-for-this-order 10}
+   :order-info {:amount-bought-from-my-company 3}})
+
+;;in another part of your program:
+
+
+;; you can use t/let:
+(t/let [{:more-info {:price-for-this-order price}
+         :order-info {:amount-bought-from-my-company quantity}} some-data]
+  (* price quantity))
+;;=> 30
+
+;; or you can use deftrack:
+(deftrack calculate-price-for-order
+  {:more-info {:price-for-this-order price}
+   :order-info {:amount-bought-from-my-company quantity}}
+  (* price quantity))
+
+(calculate-price-for-order some-data)
+;;=> 30
 ```
 
 ### Arbitrary nesting levels
 
-Deep thinking about deeply nested shapes is a bygone era:
+Deep contemplation about deeply nested shapes is the old way.
 
 ``` clojure
 (deftrack deeptx
-  {0 zero, 1 one, 2 two, 3 three} ;; <- deeptx takes a map with this shape
-  {:a zero :b {:c one :d {:e two :f {:g three}}}} ;; <- deeptx then returns one with this shape
+  {0 zero
+   1 one
+   2 two
+   3 three} ;; <- deeptx takes a map with this shape
+  {:a zero
+   :b {:c one
+       :d {:e two
+           :f {:g three}}}} ;; <- deeptx then returns one with this shape
   )
 
 (deeptx {0 "first" 1 "second" 2 "third" 3 "fourth"})
 ;;=> {:a "first", :b {:c "second", :d {:e "third", :f {:g "fourth"}}}}
 ```
+
 ### Complex leaf values
 
-`track` greatly simplifies rotating values, too:
-
-Let's simulate a game where there's an active player, and all other players wait in line to become the active one. Once a player has played their turn, they go to the back of the line.
+Let's simulate a game where there's an active player, and all other players wait in a queue to become the active one. Once a player has played their turn, they naturally go to the back of the queue.
 
 ```clojure
 
@@ -160,46 +237,13 @@ Let's simulate a game where there's an active player, and all other players wait
 Like a train track, sometimes one track can split into many. With `track` the values can be duplicated.
 
 ``` clojure
-(deftrack one-to-many x {:a x :b {:c [x x]}})
+(deftrack one-to-many {:clone-me x} {:a x :b {:c [x x]}})
 
-(one-to-many "?")
+(one-to-many {:clone-me "?"})
 
 ;;=> {:a "?", :b {:c ["?" "?"]}}
-```
-## How it works
-
-`track` is implemented in terms of `let`
-
-``` clojure
-(def move-a-key (track {:x one} {:y one}))
-
-(move-a-key {:x "MoveMe"})
-
-;;=> {:y "MoveMe"}
-
-(move-a-key {:x [:a :b :c]})
-
-;;=> {:y [:a :b :c]}
-```
-
-We see it moves any value from keypath [:x] to keypath [:y].
-
-The way it does it is by moving `{:x one}` into a `let` like so:
-
-``` clojure
-          ;; vvvvvvvv---- this is the first arg to track
-(tracks/let [{:x one} input]
-    ;; so now one is bound to (get input :x)
- ;;  vvvvvv---- this is the 2nd arg to track
-    {:y one})
 ```
 
 ## Want more examples?
 
 Check the test namespace!
-
-## License
-
-Copyright © 2016 Bryan Maass
-
-Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.

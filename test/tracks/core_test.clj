@@ -8,7 +8,7 @@
 
 (def scalar (g/one-of [g/char g/int g/string-alphanumeric g/keyword]))
 
-(def ^:dynamic *trial-count* 50)
+(def ^:dynamic *trial-count* 100)
 
 (def shallow-data-gen
   (g/one-of
@@ -28,6 +28,13 @@
                 (let [map-two (zipmap (shuffle (keys m)) (vals m))]
                   (= map-two ((track m map-two) m)))))
 (deftest t-let
+  (testing "one binding"
+    (is (= 1 (t/let [{:a a} {:a 1}] a))))
+
+  (testing "deep binding"
+    (is (= "ABCD"
+           (t/let [{:a {:b {:c {:d abcd}}}} {:a {:b {:c {:d "ABCD"}}}}] abcd))))
+
   (testing "multiple bindings"
     (is (= 2 (t/let [{:a a} {:a 1}
                      b      (+ a a)]
@@ -102,6 +109,28 @@
          ((track {:a a} {:a (str a "+" a) :b a :c a}) {:a "ayee"}))))
 
 (deftest deftrack-test
-  (try (deftrack ab {:a pop} {:b pop})
+  (try (deftrack ab {:a pop-me} {:b pop-me})
        (is (= {:b "???"} (ab {:a "???"})))
        (finally (ns-unmap *ns* 'ab))))
+
+
+(deftest shallow-arglists-metadata
+  (try (deftrack ab {:a pop-me} {:b pop-me})
+       (is (= '([{pop-me :a}]) (:arglists (meta #'ab))))
+       (finally (ns-unmap *ns* 'ab))))
+
+(deftest deep-arglists-metadata
+  (try (deftrack move-some-keys
+         {:a a :b b :c c :d {:e e}}
+         {:a b :b c :c e :d {:e a}})
+       (is (= '([{a :a, b :b, c :c, {e :e} :d}])
+              (:arglists (meta #'move-some-keys))))
+       (finally (ns-unmap *ns* 'move-some-keys))))
+
+(deftest deep-tracks-expects-metadata
+  (try (deftrack move-some-keys
+         {:a a :b b :c c :d {:e e}}
+         {:a b :b c :c e :d {:e a}})
+       (is (= '{:a a, :b b, :c c, :d {:e e}}
+              (:tracks/expects (meta #'move-some-keys))))
+       (finally (ns-unmap *ns* 'move-some-keys))))
