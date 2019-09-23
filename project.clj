@@ -1,5 +1,5 @@
-(defproject tracks "1.0.5"
-  :description "Example based function generation"
+(defproject tracks "1.0.6"
+  :description "Shape based programming"
   :url "https://github.com/escherize/tracks"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
