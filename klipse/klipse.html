@@ -1,60 +1,30 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml">
-
+<!doctype html>
+<html lang="en">
   <head>
-    <title>klipse.html</title>
-    <link rel="stylesheet" type="text/css" href="http://app.klipse.tech/css/codemirror.css">
-
-      <script>
-        window.klipse_settings = {
-        selector: '.klipse'// css selector for the html elements you want to klipsify
-        };
-      </script>
-      <script src="http://app.klipse.tech/plugin/js/klipse_plugin.js"></script>
-    </head>
-
-    <body>
-      <h1>tracks</h1>
-
-      <h2>Example based coding</h2>
-
-      <p><img src="https://raw.githubusercontent.com/escherize/tracks/master/tracks.jpg" alt="Converging Tracks" title="" /></p>
-
-      <blockquote>
-        <p>We become what we behold. We shape our tools, and thereafter our tools shape us.</p>
-
-        <p>― Marshall McLuhan</p>
-      </blockquote>
-
-      <p><a href="https://clojars.org/tracks"><img src="https://img.shields.io/clojars/v/tracks.svg" alt="Clojars Project" title="" /></a> <a href="https://travis-ci.org/escherize/tracks"><img src="https://travis-ci.org/escherize/tracks.svg?branch=master" alt="Build Status" title="" /></a></p>
-
-      <h2>Usage</h2>
-
-      <p>Add the following line to your leiningen dependencies:</p>
-
-      <p>Require tracks in your namespace header:</p>
-
-      <pre><code>(:require [tracks.core :as t :refer [track]])
-      </code></pre>
-
-      <p><code class="language-klipse" data-external-libs="https://raw.githubusercontent.com/escherize/tracks/master/src/">
-          (require '[tracks.core :refer-macros [deftrack track]])
-          ;;(require-macros '[tracks.core :as t])
-      </code></p>
-
-      <p><code class="language-klipse">
-          (deftrack a {:a a} {:b b})
-          (a {:a "?"})
-      </code></p>
-    </body>
-
-<script>
-    window.klipse_settings = {
-        selector: '.language-klipse'// css selector for the html elements you want to klipsify
-    };
-</script>
-<script src="http://app.klipse.tech/plugin/js/klipse_plugin.js"></script>
+    <meta charset="UTF-8"/>
+    <title>Document</title>
+    <link rel="stylesheet" type="text/css" href="//app.klipse.tech/css/codemirror.css">
   </head>
+  <body>
+    <code class="clojure"> (def a  42) </code>
+    <code class="clojure"> a </code>
+    <pre><code class="clojure" data-external-libs="https://raw.githubusercontent.com/viebel/math.combinatorics/master/src/main/clojure">
+(ns my.combinatorics
+ (:require [clojure.math.combinatorics :refer [permutations]]))
+
+(permutations [1 2 3 a])
+    </code></pre>
+    <pre><code class="clojure" data-external-libs="https://raw.githubusercontent.com/escherize/tracks/master/src/">
+(ns my.namespace
+ (:require [tracks.core :refer [deftrack]]))
+
+(deftrack a {:a to-b} {:b to-b})
+
+(a {:a 1})
+    </code></pre>
+    <script>
+     window.klipse_settings = { selector: '.clojure' };
+    </script>
+    <script src="//app.klipse.tech/plugin/js/klipse_plugin.js"></script>
+  </body>
+</html>
